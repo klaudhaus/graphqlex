@@ -33,7 +33,6 @@ export const gql = noOpTag
  * Represents a remote GraphQL API connection.
  */
 export class Api {
-
   /**
    * Construct a new Api instance with the given http and websockets URLs.
    * If the websockets URL is not provided it is derived by replacing the protocol on the http URL.
@@ -44,7 +43,7 @@ export class Api {
    */
   constructor (url, wsUrl) {
     const protocol = url.match(/^(https?):\/\//)[1]
-    if (!protocol) throw `Unexpected API URL [${url}]`
+    if (!protocol) throw new Error(`Unexpected API URL [${url}]`)
     this.url = url
 
     const isSecure = protocol.match(/s$/)
@@ -82,15 +81,13 @@ export class Api {
     return data
   }
 
-
   subscribe (query, variables = {}, channelName = randChannelName()) {
     this.socket = this.socket || new Socket(this.wsUrl)
     if (this.log) this.socket.log = this.log
 
     if (this.socket.subscriptions[channelName]) {
-      throw `Subscription already exists for channel [${channelName}]`
+      throw new Error(`Subscription already exists for channel [${channelName}]`)
     }
-
 
     const message = {
       id: channelName,
@@ -106,12 +103,15 @@ export class Api {
     }, 100)
 
     const subscription = this.socket.subscriptions[channelName] = {}
-    return { onData: handler => subscription.onData = handler }
+    return { onData: handler => { subscription.onData = handler } }
   }
 }
 
 class Socket {
-
+  /**
+   * Construct a new Socket instance with the given websocket URL
+   * @param wsUrl
+   */
   constructor (wsUrl) {
     this.subscriptions = {}
 
@@ -128,6 +128,7 @@ class Socket {
 
     this.webSocket.onmessage = event => {
       const data = JSON.parse(event.data)
+      let msg
 
       if (["subscription_fail", "error"].includes(data.type)) {
         let msg = `GraphQL ${data.type} for channel ${data.id} `
@@ -135,19 +136,18 @@ class Socket {
         throw new Error(msg)
       } else if (data.type === "data") {
         if (this.subscriptions[data.id] && typeof this.subscriptions[data.id].onData === "function") {
-          return this.subscriptions[data.id].onData (data.payload.data)
+          return this.subscriptions[data.id].onData(data.payload.data)
         } else msg = `data received for channel [${data.id}] with no subscription handler`
       } else if (data.type !== "ka") {
-        let msg = {
+        msg = {
           connection_ack: `[${data.id}] connection_ack, the handshake is complete`,
           init_fail: `[${data.id}] init_fail returned from the WebSocket server`,
           subscription_success: `[${data.id}] subscription_success`
         }[data.type]
-
         msg = msg || `unexpected message type [${data.type}] received from WebSocket server`
-
-        if (typeof this.log === "function") this.log(`graphqlx: ${msg}`)
       }
+
+      if (msg && typeof this.log === "function") this.log(`graphqlx: ${msg}`)
     }
   }
 }

@@ -1,12 +1,11 @@
-require = require("esm")(module)
+require = require("esm")(module) // eslint-disable-line no-global-assign
 
-const { gql, Api } = require("./graphqlex")
+const { gql, Api } = require("../graphqlex")
 const fetchMock = require("fetch-mock")
 
 require("chai").should()
 
 describe("Module: graphqlx, Class: Api", () => {
-
   describe("Class: Api", () => {
     const httpUrl = "http://myhost:123/api"
     const wsUrl = "ws://myhost:123/api"
@@ -26,9 +25,8 @@ describe("Module: graphqlx, Class: Api", () => {
     })
 
     describe("Method: exec", () => {
-
       it("returns data for a query", async () => {
-        fetchMock.post("*", { data: { allPosts: { nodes: [ { headline: "Headline 1"} ] } } })
+        fetchMock.post("*", { data: { allPosts: { nodes: [{ headline: "Headline 1" }] } } })
 
         const api = new Api(httpUrl)
         const response = await api.run(gql`
@@ -41,5 +39,4 @@ describe("Module: graphqlx, Class: Api", () => {
       })
     })
   })
-
 })
