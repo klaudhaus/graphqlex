@@ -35,13 +35,13 @@ export const gql = noOpTag
 export class Api {
   /**
    * Construct a new Api instance with the given http and websockets URLs.
+   * Second parameter can specify options object for wsUrl and any additional headers.
    * If the websockets URL is not provided it is derived by replacing the protocol on the http URL.
    * @param url
    * @param wsUrl
-   * @param log
    * @param headers
    */
-  constructor (url, wsUrl) {
+  constructor (url, { wsUrl, headers = {} }) {
     const protocol = url.match(/^(https?):\/\//)[1]
     if (!protocol) throw new Error(`Unexpected API URL [${url}]`)
     this.url = url
@@ -49,7 +49,7 @@ export class Api {
     const isSecure = protocol.match(/s$/)
     this.wsUrl = wsUrl || [`ws${isSecure ? "s" : ""}:`, url.split("//").slice(1)].join("//")
 
-    this.headers = {}
+    this.headers = headers
   }
 
   set log (fn) {
