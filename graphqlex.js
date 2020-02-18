@@ -41,7 +41,7 @@ export class Api {
    * @param wsUrl
    * @param headers
    */
-  constructor (url, { wsUrl, headers = {} }) {
+  constructor (url, { wsUrl, headers = {} } = {}) {
     const protocol = url.match(/^(https?):\/\//)[1]
     if (!protocol) throw new Error(`Unexpected API URL [${url}]`)
     this.url = url
