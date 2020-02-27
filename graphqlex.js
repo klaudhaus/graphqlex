@@ -75,8 +75,7 @@ export class Api {
     })
     const { errors, data } = await response.json()
     if (Array.isArray(errors) && errors.length && errors[0].message) {
-      console.log(errors[0].message)
-      throw new Error("GraphQL Server Error, see console for details")
+      throw new Error(`GraphQL Server Error: ${errors[0].message}`)
     }
     return data
   }
