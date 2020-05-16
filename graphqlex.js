@@ -40,14 +40,20 @@ export class Api {
    * @param url
    * @param wsUrl
    * @param headers
+   * @param fetch Fetch API implementation, e.g. node-fetch in node, defaults to window.fetch
    */
-  constructor (url, { wsUrl, headers = {} } = {}) {
+  constructor (url, {
+    wsUrl,
+    headers = {},
+    fetch = typeof window !== "undefined" && window.fetch
+  } = {}) {
     const protocol = url.match(/^(https?):\/\//)[1]
     if (!protocol) throw new Error(`Unexpected API URL [${url}]`)
     this.url = url
 
     const isSecure = protocol.match(/s$/)
     this.wsUrl = wsUrl || [`ws${isSecure ? "s" : ""}:`, url.split("//").slice(1)].join("//")
+    this.fetch = fetch
 
     this.headers = headers
   }
@@ -68,7 +74,7 @@ export class Api {
   async run (query, variables) {
     const headers = { ...standardOptions.headers, ...this.headers }
 
-    const response = await fetch(this.url, {
+    const response = await this.fetch(this.url, {
       ...standardOptions,
       headers,
       body: JSON.stringify({ query, variables })
