@@ -45,7 +45,7 @@ export class Api {
   constructor (url, {
     wsUrl,
     headers = {},
-    fetch = typeof window !== "undefined" && window.fetch
+    fetch
   } = {}) {
     const protocol = url.match(/^(https?):\/\//)[1]
     if (!protocol) throw new Error(`Unexpected API URL [${url}]`)
@@ -74,7 +74,8 @@ export class Api {
   async run (query, variables) {
     const headers = { ...standardOptions.headers, ...this.headers }
 
-    const response = await this.fetch(this.url, {
+    const fetch = this.fetch || window.fetch
+    const response = await fetch(this.url, {
       ...standardOptions,
       headers,
       body: JSON.stringify({ query, variables })
