@@ -75,11 +75,16 @@ export class Api {
     const headers = { ...standardOptions.headers, ...this.headers }
 
     const fetch = this.fetch || window.fetch
-    const response = await fetch(this.url, {
-      ...standardOptions,
-      headers,
-      body: JSON.stringify({ query, variables })
-    })
+    let response
+    try {
+      response = await fetch(this.url, {
+        ...standardOptions,
+        headers,
+        body: JSON.stringify({ query, variables })
+      })
+    } catch (err) {
+      throw new Error("GraphQL network error. Try: Check network connection / Turn off ad blockers")
+    }
     const { errors, data } = await response.json()
     if (Array.isArray(errors) && errors.length && errors[0].message) {
       throw new Error(`GraphQL Server Error: ${errors[0].message}`)
