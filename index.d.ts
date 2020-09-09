@@ -1,0 +1,29 @@
+export type noOpTag = (strings: TemplateStringsArray, ...exps: unknown[]) => string
+export type gql = noOpTag
+
+type Fetch = (input: RequestInfo, init?: RequestInit) => Promise<Response>
+type ApiOptions = {
+  wsUrl: string,
+  headers: object,
+  fetch: Fetch
+}
+
+export class Api {
+  url: string
+  wsUrl: string
+  fetch: Fetch
+  headers: object
+
+  run: (query: string, variables?: object) => Promise<object>
+
+  subscribe: (query: string, variables?: object, channelName?: string) => { onData: () => void }
+
+  constructor( url: string, options?: ApiOptions )
+}
+
+export class Socket {
+  subscriptions: object
+  webSocket: WebSocket
+
+  constructor(wsUrl: string)
+}
