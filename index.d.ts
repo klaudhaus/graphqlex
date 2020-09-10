@@ -1,5 +1,5 @@
-export type noOpTag = (strings: TemplateStringsArray, ...exps: unknown[]) => string
-export type gql = noOpTag
+export function noOpTag (strings: TemplateStringsArray, ...exps: unknown[]) : string
+export function gql (strings: TemplateStringsArray, ...exps: unknown[]) : string
 
 type Fetch = (input: RequestInfo, init?: RequestInit) => Promise<Response>
 type ApiOptions = {
