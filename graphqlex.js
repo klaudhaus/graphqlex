@@ -1,7 +1,8 @@
 const standardOptions = {
   method: "POST",
   headers: {
-    "Content-type": "application/json"
+    "Content-type": "application/json",
+    Accept: "application/json"
   }
 }
 
