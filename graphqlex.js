@@ -42,21 +42,31 @@ export class Api {
    * @param wsUrl
    * @param headers
    * @param fetch Fetch API implementation, e.g. node-fetch in node, defaults to window.fetch
+   * @param onError A function with the signature (message: string, error: object) => void
    */
   constructor (url, {
     wsUrl,
     headers = {},
-    fetch
+    fetch = window.fetch.bind(window),
+    onError
   } = {}) {
     const protocol = url.match(/^(https?):\/\//)[1]
     if (!protocol) throw new Error(`Unexpected API URL [${url}]`)
-    this.url = url
-
     const isSecure = protocol.match(/s$/)
+
+    this.url = url
     this.wsUrl = wsUrl || [`ws${isSecure ? "s" : ""}:`, url.split("//").slice(1)].join("//")
     this.fetch = fetch
-
     this.headers = headers
+    this.onError = (err) => {
+      const msg = typeof err === "string" ? err
+        : (err && err.message) || "GraphQL error. Try: Check network connection / Turn off ad blockers"
+      if (typeof onError === "function") {
+        onError(msg, err)
+      }
+      err = err instanceof Error ? err : new Error(msg)
+      throw err
+    }
   }
 
   set log (fn) {
@@ -75,20 +85,19 @@ export class Api {
   async run (query, variables) {
     const headers = { ...standardOptions.headers, ...this.headers }
 
-    const fetch = this.fetch || window.fetch
     let response
     try {
-      response = await fetch(this.url, {
+      response = await this.fetch(this.url, {
         ...standardOptions,
         headers,
         body: JSON.stringify({ query, variables })
       })
     } catch (err) {
-      throw new Error("GraphQL network error. Try: Check network connection / Turn off ad blockers")
+      this.onError(err)
     }
     const { errors, data } = await response.json()
-    if (Array.isArray(errors) && errors.length && errors[0].message) {
-      throw new Error(`GraphQL Server Error: ${errors[0].message}`)
+    if (Array.isArray(errors) && errors.length) {
+      this.onError(errors[0])
     }
     return data
   }

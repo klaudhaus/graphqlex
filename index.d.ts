@@ -3,9 +3,10 @@ export function gql (strings: TemplateStringsArray, ...exps: unknown[]) : string
 
 type Fetch = (input: RequestInfo, init?: RequestInit) => Promise<Response>
 type ApiOptions = {
-  wsUrl: string,
-  headers: object,
-  fetch: Fetch
+  wsUrl?: string,
+  headers?: object,
+  fetch?: Fetch,
+  onError?: (message: string, error: object) => any
 }
 
 export class Api {
