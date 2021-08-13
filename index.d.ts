@@ -17,7 +17,7 @@ export class Api {
 
   run: (query: string, variables?: object) => Promise<object>
 
-  subscribe: (query: string, variables?: object, channelName?: string) => { onData: () => void }
+  subscribe: (query: string, variables?: object, channelName?: string) => { onData: (handler: any) => void }
 
   constructor( url: string, options?: ApiOptions )
 }
