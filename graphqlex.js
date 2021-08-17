@@ -6,7 +6,7 @@ const standardOptions = {
   }
 }
 
-const randChannelName = () => (new Date().getTime()).toString().slice(-5)
+const randChannelName = () => Math.ceil(Math.random() * 1000000).toString()
 
 /**
  * A tagged template literal function that behaves like a non-tagged template.
@@ -103,13 +103,6 @@ export class Api {
   }
 
   subscribe (query, variables = {}, channelName = randChannelName()) {
-    this.socket = this.socket || new Socket(this.wsUrl)
-    if (this.log) this.socket.log = this.log
-
-    if (this.socket.subscriptions[channelName]) {
-      throw new Error(`Subscription already exists for channel [${channelName}]`)
-    }
-
     const message = {
       id: channelName,
       type: "start",
@@ -118,10 +111,21 @@ export class Api {
         variables
       }
     }
+    const startSub = () => this.socket.webSocket.send(JSON.stringify(message))
 
-    setTimeout(() => {
-      this.socket.webSocket.send(JSON.stringify(message))
-    }, 100)
+    if (this.socket) {
+      if (this.socket.subscriptions[channelName]) {
+        throw new Error(`Subscription already exists for channel [${channelName}]`)
+      }
+      if (this.socket.connected) {
+        startSub()
+      } else {
+        this.socket.connectedHandlers.push(startSub)
+      }
+    } else {
+      this.socket = new Socket(this.wsUrl, this.headers, startSub)
+      if (this.log) this.socket.log = this.log
+    }
 
     const subscription = this.socket.subscriptions[channelName] = {}
     return { onData: handler => { subscription.onData = handler } }
@@ -132,8 +136,14 @@ class Socket {
   /**
    * Construct a new Socket instance with the given websocket URL
    * @param wsUrl
+   * @param headers
+   * @param onConnected
    */
-  constructor (wsUrl) {
+  constructor (wsUrl, headers = {}, onConnected = () => {}) {
+    this.connected = false
+
+    this.connectedHandlers = onConnected ? [onConnected] : []
+
     this.subscriptions = {}
 
     this.webSocket = new WebSocket(wsUrl, "graphql-subscriptions")
@@ -141,7 +151,7 @@ class Socket {
     this.webSocket.onopen = () => {
       const message = {
         type: "connection_init",
-        payload: {}
+        payload: headers
       }
 
       this.webSocket.send(JSON.stringify((message)))
@@ -166,6 +176,10 @@ class Socket {
           subscription_success: `[${data.id}] subscription_success`
         }[data.type]
         msg = msg || `unexpected message type [${data.type}] received from WebSocket server`
+        if (data.type === "connection_ack" && typeof onConnected === "function") {
+          this.connected = true
+          this.connectedHandlers.forEach(handler => handler())
+        }
       }
 
       if (msg && typeof this.log === "function") this.log(`graphqlx: ${msg}`)
