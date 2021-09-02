@@ -127,8 +127,17 @@ export class Api {
       if (this.log) this.socket.log = this.log
     }
 
-    const subscription = this.socket.subscriptions[channelName] = {}
-    return { onData: handler => { subscription.onData = handler } }
+    const socketSubscription = this.socket.subscriptions[channelName] = {}
+    const result = {
+      onData (handler) {
+        socketSubscription.onData = handler
+        return result
+      },
+      close () {
+        delete this.socket.subscriptions[channelName]
+      }
+    }
+    return result
   }
 }
 
