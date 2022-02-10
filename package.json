@@ -1,9 +1,10 @@
 {
   "name": "graphqlex",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A minimal client library for executing GraphQL APIs",
   "main": "graphqlex.js",
   "module": "graphqlex.js",
+  "type": "module",
   "scripts": {
     "test": "mocha test/graphqlex-test.js"
   },
