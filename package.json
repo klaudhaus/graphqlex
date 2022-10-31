@@ -1,9 +1,9 @@
 {
   "name": "graphqlex",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "A minimal client library for executing GraphQL APIs",
-  "main": "lib/graphqlex-codegen.js",
-  "types": "lib/graphqlex-codegen.d.ts",
+  "main": "lib/graphqlex.js",
+  "types": "lib/graphqlex.d.ts",
   "type": "module",
   "scripts": {
     "dev": "tsc --watch",
