@@ -236,3 +236,63 @@ class Socket {
     }
   }
 }
+
+/**
+ * Types and utilities to support the sanitisation of input objects.
+ */
+
+export type InputTypeInfo = {
+  name: string
+  fields: InputFieldInfo[]
+}
+
+export type InputFieldInfo = {
+  name: string
+  typeName: string
+  isList: boolean
+  isNonNull: boolean
+}
+
+export type InputTypeInfoMap = {
+  [typeName: string]: InputTypeInfo
+}
+
+/**
+ * Given a proposed input to a GraphQL mutation
+ * (such as an instance of an equivalent output object, which may have additional data fields
+ * as well as other internal properties such as `$` or `__typename`)
+ * with only the properties that are fields of the named input type.
+ *
+ * Given that the candidate type must be compatible with the input type,
+ * (i.e. have at least the input object's fields)
+ * it is also used as the return type.
+ */
+export const trimInput = <T>(proposedInput: T, typeName: string, inputTypeInfoMap: InputTypeInfoMap): T => {
+  const inputType = inputTypeInfoMap[typeName]
+  if (!inputType) return proposedInput
+
+  const result: T = {} as T
+  for (const { name, typeName, isList } of inputType.fields) {
+    const fieldName = name as keyof T
+    const field = proposedInput[fieldName]
+    if (typeof field !== "undefined") {
+      // The field has been provided, add it to the input object
+      if (typeName in inputTypeInfoMap) {
+        // The field is itself an input type
+        if (isList && Array.isArray(field)) {
+          const list = []
+          for (const item of field) {
+            list.push(trimInput(item, typeName, inputTypeInfoMap))
+          }
+          result[fieldName] = list as T[keyof T]
+        } else {
+          result[fieldName] = trimInput(field, typeName, inputTypeInfoMap)
+        }
+      } else {
+        // Some other (probably scalar) field - copy it across as is
+        result[fieldName] = field
+      }
+    }
+  }
+  return result
+}
