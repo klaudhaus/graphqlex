@@ -1,9 +1,11 @@
-require = require("esm")(module) // eslint-disable-line no-global-assign
+import { Api } from "../graphqlex"
+import fetchMock from "fetch-mock"
+import chai from "chai"
+import { describe } from "mocha"
 
-const { gql, Api } = require("../graphqlex")
-const fetchMock = require("fetch-mock")
+const mockFetch = fetchMock.sandbox()
 
-require("chai").should()
+chai.should()
 
 describe("Module: graphqlx, Class: Api", () => {
   describe("Class: Api", () => {
@@ -11,14 +13,14 @@ describe("Module: graphqlx, Class: Api", () => {
     const wsUrl = "ws://myhost:123/api"
 
     it("has a constructor which takes two URLS and stores them on the object", () => {
-      const api = new Api(httpUrl, wsUrl)
+      const api = new Api(httpUrl, { wsUrl, fetch: mockFetch })
 
       api.should.have.property("url").which.equals(httpUrl)
       api.should.have.property("wsUrl").which.equals(wsUrl)
     })
 
     it("derives the websockets URL from the http URL if not provided", () => {
-      const api = new Api(httpUrl)
+      const api = new Api(httpUrl, { fetch: mockFetch })
 
       api.should.have.property("url").which.equals(httpUrl)
       api.should.have.property("wsUrl").which.equals(wsUrl)
@@ -26,10 +28,10 @@ describe("Module: graphqlx, Class: Api", () => {
 
     describe("Method: exec", () => {
       it("returns data for a query", async () => {
-        fetchMock.post("*", { data: { allPosts: { nodes: [{ headline: "Headline 1" }] } } })
+        mockFetch.post("http://myhost:123/api", { data: { allPosts: { nodes: [{ headline: "Headline 1" }] } } })
 
-        const api = new Api(httpUrl)
-        const response = await api.run(gql`
+        const api = new Api(httpUrl, { fetch: mockFetch })
+        const response = await api.run(`
           query { allPosts ( offset: 0 ) { nodes { headline }}}
         `)
         response.should.have.property("allPosts")

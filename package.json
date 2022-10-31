@@ -1,27 +1,35 @@
 {
   "name": "graphqlex",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "A minimal client library for executing GraphQL APIs",
-  "main": "graphqlex.js",
-  "module": "graphqlex.js",
+  "main": "lib/graphqlex-codegen.js",
+  "types": "lib/graphqlex-codegen.d.ts",
   "type": "module",
   "scripts": {
-    "test": "mocha test/graphqlex-test.js"
+    "dev": "tsc --watch",
+    "prepare": "tsc",
+    "test": "mocha --experimental-specifier-resolution=node -r source-map-support/register lib/test/graphqlex-test.js"
   },
   "author": "tstewart@klaudhaus.com",
   "repository": "github:klaudhaus/graphqlex",
   "license": "MIT",
   "devDependencies": {
-    "chai": "^4.2.0",
-    "eslint": "^6.7.2",
-    "eslint-config-standard": "^14.1.0",
-    "eslint-plugin-import": "^2.18.2",
-    "eslint-plugin-node": "^10.0.0",
-    "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.1",
-    "esm": "^3.2.25",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.1.0",
+    "@types/node-fetch": "^2.6.2",
+    "@typescript-eslint/eslint-plugin": "^4.31.0",
+    "@typescript-eslint/parser": "4",
+    "chai": "^4.3.6",
+    "eslint": "7",
+    "eslint-config-standard-with-typescript": "^20.0.0",
+    "eslint-plugin-import": "2",
+    "eslint-plugin-node": "11",
+    "eslint-plugin-promise": "4",
     "fetch-mock": "^8.0.1",
-    "mocha": "^6.2.2",
-    "node-fetch": "^2.6.0"
-  }
+    "mocha": "^9.2.2",
+    "node-fetch": "^2.6.0",
+    "source-map-support": "^0.5.21",
+    "typescript": "^4.3.5"
+  },
+  "dependencies": {}
 }
