@@ -105,9 +105,8 @@ export class Api {
   url: string
   wsUrl: string
   fetch: Fetch
-  headers: object
+  headers: any
   socket: Socket
-
 
   onError: (msg: string, err?: Error) => void
 

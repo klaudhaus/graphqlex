@@ -1,6 +1,6 @@
 {
   "name": "graphqlex",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "A minimal client library for executing GraphQL APIs",
   "main": "lib/graphqlex.js",
   "types": "lib/graphqlex.d.ts",
