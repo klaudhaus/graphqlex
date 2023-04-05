@@ -36,7 +36,7 @@ export type ApiOptions = {
   wsUrl?: string
   headers?: object
   fetch?: Fetch
-  onError?: (msg: string, err: Error) => void
+  onResponse?: (response: GraphQLResponse) => any
 }
 
 export type Subscription = {
@@ -54,12 +54,39 @@ export type Subscription = {
 export type SubscriptionDataHandler = (data: any) => any
 
 /**
- * Description of the error payload from a GraphQL call.
+ * GraphQLEx returns an enhanced version of the original HTTP response
+ * for queries and mutations.
  */
-export type GraphQLErrorPayload = {
-  type: GraphQLErrorLevel
-  body: string // The response body as text, applies especially to InvalidResponse
-  errors: GraphQLError[]
+export type GraphQLResponse <T = any> = Response & {
+  /**
+   * The GraphQL response condition.
+   */
+  condition: GraphQLResponseCondition
+
+  /**
+   * The response data.
+   */
+  data?: T
+
+  /**
+   * Details of request or field error(s).
+   */
+  graphQLErrors?: GraphQLError[]
+
+  /**
+   * Any JavaScript execution error.
+   */
+  error?: Error
+
+  /**
+   * Original query string.
+   */
+  query?: string
+
+  /**
+   * Original variables.
+   */
+  variables?: any
 }
 
 /**
@@ -68,11 +95,31 @@ export type GraphQLErrorPayload = {
  * the remainder are service errors, see the GraphQL spec for more details on these:
  * http://spec.graphql.org/draft/#sec-Errors
  */
-export enum GraphQLErrorLevel {
-  NetworkCallFailed = "NetworkCallFailed", // The network call failed entirely
-  InvalidResponse = "InvalidResponse", // The response is not valid JSON
-  RequestError = "RequestError", // The response only returned an error state, no data, e.g. a parse error before processing
-  FieldError = "FieldError" // The response contains data as well as some additional error state, e.g. validation errors
+export enum GraphQLResponseCondition {
+  /**
+   * The response was received without errors.
+   */
+  OK = "OK",
+  /**
+   * The request could not be converted to JSON.
+   */
+  InvalidRequest = "Invalid request",
+  /**
+   * The network call failed entirely.
+   */
+  NetworkCallFailed = "Network call failed",
+  /**
+   * The response is not valid JSON.
+   */
+  InvalidResponse = "Invalid response",
+  /**
+   * The response only returned an error state, no data, e.g. a parse error before processing.
+   */
+  RequestError = "Request error",
+  /**
+   * The response contains data as well as some additional error state, e.g. validation errors.
+   */
+  FieldError = "Field error"
 }
 
 export type GraphQLError = {
@@ -102,13 +149,40 @@ export type GraphQLError = {
  */
 export class Api {
 
+  /**
+   * Service URL.
+   */
   url: string
+
+  /**
+   * Web sockets service URL.
+   * Not necessary if the host and port match the main URL.
+   */
   wsUrl: string
+
+  /**
+   * Fetch API implementation.
+   * Set to node-fetch or similar if running in Node.
+   * Defaults to the DOM Fetch API in a browser.
+   */
   fetch: Fetch
+
+  /**
+   * Headers applied to all API calls.
+   * Useful for authentication etc.
+   */
   headers: any
+
+  /**
+   * Set internally to the Socket instance for use in submissions.
+   */
   socket: Socket
 
-  onError: (msg: string, err?: Error) => void
+  /**
+   * A handler performed on each call response before it is returned to application code.
+   * Allows global handling of statuses, errors, header checks (e.g. API version) etc.
+   */
+  onReponse: (response: GraphQLResponse) => any
 
   /**
    * Construct a new Api instance with the given http and websockets URLs.
@@ -131,16 +205,7 @@ export class Api {
     this.wsUrl = options.wsUrl || [`ws${isSecure ? "s" : ""}:`, url.split("//").slice(1)].join("//")
     this.fetch = options.fetch
     this.headers = options.headers
-    this.onError = (err: Error | string) => {
-      const msg = typeof err === "string"
-        ? err
-        : (err?.message) || "GraphQL error. Try: Check network connection / Turn off ad blockers"
-      if (typeof options.onError === "function") {
-        options.onError(msg, <Error>err)
-      }
-      err = err instanceof Error ? err : new Error(msg)
-      throw err
-    }
+    this.onReponse = options.onResponse
   }
 
   get log () {
@@ -155,40 +220,59 @@ export class Api {
 
   /**
    * Execute a query or mutation.
-   * @param query
-   * @param variables
-   * @returns {Promise<void>}
+   *
+   * The parameter name `query` contains the GraphQL for either operation,
+   * as that is the request body key specified within the GraphQL standard.
    */
-  async run (query: string, variables: object = {}) {
-    const headers = { ...standardOptions.headers, ...this.headers }
+  async run <T = any> (query: string, variables: any = {}): Promise<GraphQLResponse<T>> {
+    const graphQLResponse = (
+      condition: GraphQLResponseCondition,
+      { data, error, graphQLErrors }: Partial<GraphQLResponse>
+    ) => {
+      const result: GraphQLResponse = {
+        ...response, data, condition, error, graphQLErrors, query, variables
+      }
+      if (typeof this.onReponse === "function") {
+        this.onReponse(result)
+      }
+      return result
+    }
 
-    let response
+    let body: string
+    let response: Response
+
     try {
+      body = JSON.stringify({ query, variables })
+    } catch (error) {
+      return graphQLResponse(GraphQLResponseCondition.InvalidRequest, { error })
+    }
+
+    try {
+      // Make the call
       response = await this.fetch(this.url, {
         ...standardOptions,
-        headers,
-        body: JSON.stringify({ query, variables })
+        headers: { ...standardOptions.headers, ...this.headers },
+        body
       })
-    } catch (err) {
-      // Error condition - the fetch fails entirely
-      if (typeof this.onError === "function") {
-        this.onError("GraphQL Network Error", err)
-      } else throw err
+    } catch (error) {
+      // Network call failed
+      return graphQLResponse(GraphQLResponseCondition.NetworkCallFailed, { error })
     }
+
     try {
-      const { errors, data } = await response.clone().json() // Clone to allow reading again as text if invalid
-      if (Array.isArray(errors) && errors.length) {
-        if (typeof this.onError === "function") {
-          this.onError(errors[0])
-        } else throw new Error(`Unhandled GraphQL error: ${errors[0]}`)
-      }
-      return data
-    } catch (err) {
-      // Error condition - the response is not valid JSON
-      if (typeof this.onError === "function") {
-        const text = await response.text()
-        this.onError(`Invalid GraphQL response\n${text}`, err)
-      } else throw err
+      // Valid response - check GraphQL error state
+      // Clone to allow reading response again in onResponse
+      const { errors, data } = await response.clone().json() as { errors: GraphQLError[], data: any }
+      const condition = Array.isArray(errors) && errors.length
+        ? data !== undefined && data !== null
+          ? GraphQLResponseCondition.FieldError
+          : GraphQLResponseCondition.RequestError
+        : GraphQLResponseCondition.OK
+
+      return graphQLResponse(condition, { data, graphQLErrors: errors })
+    } catch (error) {
+      // Response JSON cannot be parsed
+      return graphQLResponse(GraphQLResponseCondition.InvalidResponse, { error })
     }
   }
 
@@ -335,7 +419,7 @@ export const trimInput = <T>(proposedInput: T, typeName: string, inputTypeInfoMa
     const field = proposedInput[fieldName]
     if (typeof field !== "undefined") {
       // The field has been provided, add it to the input object
-      if (typeName in inputTypeInfoMap) {
+      if (field !== null && typeName in inputTypeInfoMap) {
         // The field is itself an input type
         if (isList && Array.isArray(field)) {
           const list = []

@@ -7,7 +7,7 @@ const mockFetch = fetchMock.sandbox()
 
 chai.should()
 
-describe("Module: graphqlx, Class: Api", () => {
+describe("Module: graphqlex, Class: Api", () => {
   describe("Class: Api", () => {
     const httpUrl = "http://myhost:123/api"
     const wsUrl = "ws://myhost:123/api"
@@ -31,13 +31,13 @@ describe("Module: graphqlx, Class: Api", () => {
         mockFetch.post("http://myhost:123/api", { data: { allPosts: { nodes: [{ headline: "Headline 1" }] } } })
 
         const api = new Api(httpUrl, { fetch: mockFetch })
-        const response = await api.run(`
+        const response = await api.run<any>(`
           query { allPosts ( offset: 0 ) { nodes { headline }}}
         `)
-        response.should.have.property("allPosts")
-        response.allPosts.should.have.property("nodes")
-        response.allPosts.nodes.should.be.an("array").with.length(1)
-        response.allPosts.nodes[0].should.have.property("headline").which.equals("Headline 1")
+        response.data.should.have.property("allPosts")
+        response.data.allPosts.should.have.property("nodes")
+        response.data.allPosts.nodes.should.be.an("array").with.length(1)
+        response.data.allPosts.nodes[0].should.have.property("headline").which.equals("Headline 1")
       })
     })
   })
