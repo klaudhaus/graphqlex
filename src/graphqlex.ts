@@ -259,21 +259,26 @@ export class Api {
       return graphQLResponse(GraphQLResponseCondition.NetworkCallFailed, { error })
     }
 
+    let errors: GraphQLError[]
+    let data: any
     try {
       // Valid response - check GraphQL error state
       // Clone to allow reading response again in onResponse
-      const { errors, data } = await response.clone().json() as { errors: GraphQLError[], data: any }
-      const condition = Array.isArray(errors) && errors.length
-        ? data !== undefined && data !== null
-          ? GraphQLResponseCondition.FieldError
-          : GraphQLResponseCondition.RequestError
-        : GraphQLResponseCondition.OK
-
-      return graphQLResponse(condition, { data, graphQLErrors: errors })
+      const responseJson = await response.clone().json()
+      errors = responseJson.errors
+      data = responseJson.data
     } catch (error) {
       // Response JSON cannot be parsed
       return graphQLResponse(GraphQLResponseCondition.InvalidResponse, { error })
     }
+    const condition = Array.isArray(errors) && errors.length
+      ? [undefined, null].includes(data) ||
+      (typeof data === "object" && Object.keys(data).every(key => [undefined, null].includes(data[key])))
+          ? GraphQLResponseCondition.RequestError
+          : GraphQLResponseCondition.FieldError
+      : GraphQLResponseCondition.OK
+
+    return graphQLResponse(condition, { data, graphQLErrors: errors })
   }
 
   subscribe (query: string, variables: object = {}, channelName = randChannelName()): Subscription {
