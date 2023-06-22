@@ -57,7 +57,12 @@ export type SubscriptionDataHandler = (data: any) => any
  * GraphQLEx returns an enhanced version of the original HTTP response
  * for queries and mutations.
  */
-export type GraphQLResponse <T = any> = Response & {
+export type GraphQLResponse <T = any> = {
+  /**
+   * The original network response.
+   */
+  net: Response
+
   /**
    * The GraphQL response condition.
    */
@@ -230,7 +235,7 @@ export class Api {
       { data, error, graphQLErrors }: Partial<GraphQLResponse>
     ) => {
       const result: GraphQLResponse = {
-        ...response, data, condition, error, graphQLErrors, query, variables
+        net: response, data, condition, error, graphQLErrors, query, variables
       }
       if (typeof this.onReponse === "function") {
         this.onReponse(result)
