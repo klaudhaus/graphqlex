@@ -448,3 +448,38 @@ export const trimInput = <T>(proposedInput: T, typeName: string, inputTypeInfoMa
   }
   return result
 }
+
+/**
+ * Given a complete set of variables for a GraphQL operation,
+ * trim the proposed variable whose key and type information is provided in an array,
+ * according to the definitions in the given `InputTypeInfoMap`.
+ */
+export const trimInputs = <V>(
+  vars: V,
+  keyTypes: Array<[keyof V, string]>,
+  inputTypeInfoMap: InputTypeInfoMap
+) => {
+  for (const [key, type] of keyTypes) {
+    const value = vars[key]
+    if (value) {
+      if (Array.isArray(value)) {
+        vars[key] = value.map(v => trimInput(v, type, inputTypeInfoMap)) as V[keyof V]
+      } else if (typeof vars[key] === "object") {
+        vars[key] = trimInput(vars[key], type, inputTypeInfoMap)
+      }
+    }
+  }
+}
+
+/**
+ * Promote the result of a single-operation call
+ * to be the data property on its response object.
+ *
+ * Supports a pattern where multi-operation calls have property names
+ * on the data object to match each operation
+ * while single operation calls attach the result direct to the data object.
+ */
+export const promoteResponseData = (response: GraphQLResponse, name: string) => {
+  response.data = response.data?.[name]
+  response.graphQLErrors?.forEach(e => e.path?.shift())
+}

@@ -31,7 +31,7 @@ describe("Module: graphqlex, Class: Api", () => {
         mockFetch.post("http://myhost:123/api", { data: { allPosts: { nodes: [{ headline: "Headline 1" }] } } })
 
         const api = new Api(httpUrl, { fetch: mockFetch })
-        const response = await api.run<any>(`
+        const response = await api.run(`
           query { allPosts ( offset: 0 ) { nodes { headline }}}
         `)
         response.data.should.have.property("allPosts")
